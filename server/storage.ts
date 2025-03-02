@@ -32,7 +32,9 @@ export class MemStorage implements IStorage {
   }
 
   async getAllDecks(): Promise<Deck[]> {
-    return Array.from(this.decks.values());
+    const decks = Array.from(this.decks.values());
+    console.log("Retrieving all decks:", decks); // Debug log
+    return decks;
   }
 
   async createDeck(deck: InsertDeck): Promise<Deck> {
@@ -43,6 +45,7 @@ export class MemStorage implements IStorage {
       description: deck.description ?? null,
       tags: deck.tags ?? null,
     };
+    console.log("Creating new deck:", newDeck); // Debug log
     this.decks.set(id, newDeck);
     return newDeck;
   }

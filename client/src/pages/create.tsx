@@ -1,6 +1,6 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { insertDeckSchema, type InsertDeck } from "@shared/schema";
+import { insertDeckSchema, type InsertDeck, type Deck } from "@shared/schema";
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
-import { Save, Plus, Tags } from "lucide-react";
+import { Save, Plus } from "lucide-react";
 import { useState } from "react";
 
 export default function Create() {
@@ -30,16 +30,17 @@ export default function Create() {
   const onSubmit = async (data: InsertDeck) => {
     try {
       setIsSubmitting(true);
-      const deck = await apiRequest("POST", "/api/decks", data);
-      // Invalider le cache pour forcer le rechargement des decks
+      const response = await apiRequest<Deck>("POST", "/api/decks", data);
+      // Invalider le cache des decks pour forcer un rechargement
       await queryClient.invalidateQueries({ queryKey: ["/api/decks"] });
       toast({
         title: "Deck créé avec succès",
         description: "Vous pouvez maintenant ajouter des cartes à votre deck.",
       });
-      // Rediriger vers la page d'édition du deck
-      setLocation(`/edit/${deck.id}`);
+      // Rediriger vers la page d'édition du deck avec l'ID renvoyé par le serveur
+      setLocation(`/edit/${response.id}`);
     } catch (error) {
+      console.error("Erreur lors de la création du deck:", error);
       toast({
         title: "Erreur",
         description: "Impossible de créer le deck. Veuillez réessayer.",
@@ -89,11 +90,7 @@ export default function Create() {
                       <Textarea
                         placeholder="Décrivez le contenu de votre deck"
                         className="min-h-[100px]"
-                        value={field.value || ""}
-                        onChange={field.onChange}
-                        onBlur={field.onBlur}
-                        name={field.name}
-                        ref={field.ref}
+                        {...field}
                       />
                     </FormControl>
                     <FormMessage />
