@@ -31,14 +31,15 @@ export default function Create() {
     try {
       setIsSubmitting(true);
       const response = await apiRequest<Deck>("POST", "/api/decks", data);
-      // Invalider le cache des decks pour forcer un rechargement
       await queryClient.invalidateQueries({ queryKey: ["/api/decks"] });
+
+      // Rediriger immédiatement vers la page d'édition pour ajouter des cartes
+      setLocation(`/edit/${response.id}`);
+
       toast({
         title: "Deck créé avec succès",
-        description: "Vous pouvez maintenant ajouter des cartes à votre deck.",
+        description: "Commencez à ajouter vos cartes maintenant !",
       });
-      // Rediriger vers la page d'édition du deck avec l'ID renvoyé par le serveur
-      setLocation(`/edit/${response.id}`);
     } catch (error) {
       console.error("Erreur lors de la création du deck:", error);
       toast({
