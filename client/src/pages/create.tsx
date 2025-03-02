@@ -1,6 +1,6 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { insertDeckSchema, insertCardSchema, type InsertDeck, type InsertCard } from "@shared/schema";
+import { insertDeckSchema, type InsertDeck } from "@shared/schema";
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -10,12 +10,15 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
+import { Save, Plus, Tags } from "lucide-react";
+import { useState } from "react";
 
 export default function Create() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const deckForm = useForm<InsertDeck>({
+  const form = useForm<InsertDeck>({
     resolver: zodResolver(insertDeckSchema),
     defaultValues: {
       name: "",
@@ -26,19 +29,24 @@ export default function Create() {
 
   const onSubmit = async (data: InsertDeck) => {
     try {
+      setIsSubmitting(true);
       const deck = await apiRequest("POST", "/api/decks", data);
-      queryClient.invalidateQueries({ queryKey: ["/api/decks"] });
+      // Invalider le cache pour forcer le rechargement des decks
+      await queryClient.invalidateQueries({ queryKey: ["/api/decks"] });
       toast({
-        title: "Success",
-        description: "Deck created successfully",
+        title: "Deck créé avec succès",
+        description: "Vous pouvez maintenant ajouter des cartes à votre deck.",
       });
-      setLocation("/");
+      // Rediriger vers la page d'édition du deck
+      setLocation(`/edit/${deck.id}`);
     } catch (error) {
       toast({
-        title: "Error",
-        description: "Failed to create deck",
+        title: "Erreur",
+        description: "Impossible de créer le deck. Veuillez réessayer.",
         variant: "destructive",
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -48,36 +56,22 @@ export default function Create() {
       animate={{ opacity: 1, y: 0 }}
       className="max-w-2xl mx-auto space-y-8"
     >
-      <h1 className="text-4xl font-bold">Create New Deck</h1>
+      <h1 className="text-4xl font-bold">Créer un nouveau deck</h1>
 
       <Card>
         <CardContent className="pt-6">
-          <Form {...deckForm}>
-            <form onSubmit={deckForm.handleSubmit(onSubmit)} className="space-y-6">
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               <FormField
-                control={deckForm.control}
+                control={form.control}
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Deck Name</FormLabel>
+                    <FormLabel>Nom du deck</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter deck name" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={deckForm.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Description</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Enter deck description"
-                        {...field}
+                      <Input 
+                        placeholder="Entrez le nom du deck" 
+                        {...field} 
                       />
                     </FormControl>
                     <FormMessage />
@@ -85,9 +79,78 @@ export default function Create() {
                 )}
               />
 
-              <Button type="submit" className="w-full">
-                Create Deck
-              </Button>
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Décrivez le contenu de votre deck"
+                        className="min-h-[100px]"
+                        value={field.value || ""}
+                        onChange={field.onChange}
+                        onBlur={field.onBlur}
+                        name={field.name}
+                        ref={field.ref}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="tags"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Tags</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Ajoutez des tags séparés par des virgules"
+                        value={field.value?.join(", ") || ""}
+                        onChange={(e) => {
+                          const tags = e.target.value
+                            .split(",")
+                            .map((tag) => tag.trim())
+                            .filter(Boolean);
+                          field.onChange(tags);
+                        }}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="flex justify-end gap-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setLocation("/")}
+                >
+                  Annuler
+                </Button>
+                <Button 
+                  type="submit" 
+                  disabled={isSubmitting}
+                  className="gap-2"
+                >
+                  {isSubmitting ? (
+                    <motion.div
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                    >
+                      <Save className="h-4 w-4" />
+                    </motion.div>
+                  ) : (
+                    <Plus className="h-4 w-4" />
+                  )}
+                  {isSubmitting ? "Création..." : "Créer le deck"}
+                </Button>
+              </div>
             </form>
           </Form>
         </CardContent>
