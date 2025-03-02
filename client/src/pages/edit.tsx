@@ -65,8 +65,8 @@ export default function EditDeck() {
 
   const onSubmitCard = async (data: InsertCard) => {
     try {
-      await apiRequest("POST", "/api/cards", data);
-      queryClient.invalidateQueries({ queryKey: [`/api/decks/${id}/cards`] });
+      const response = await apiRequest<Card>("POST", "/api/cards", data);
+      await queryClient.invalidateQueries({ queryKey: [`/api/decks/${id}/cards`] });
       toast({
         title: "Carte créée",
         description: "La carte a été ajoutée avec succès",
@@ -85,7 +85,7 @@ export default function EditDeck() {
   const deleteCard = async (cardId: number) => {
     try {
       await apiRequest("DELETE", `/api/cards/${cardId}`);
-      queryClient.invalidateQueries({ queryKey: [`/api/decks/${id}/cards`] });
+      await queryClient.invalidateQueries({ queryKey: [`/api/decks/${id}/cards`] });
       toast({
         title: "Carte supprimée",
         description: "La carte a été supprimée avec succès",

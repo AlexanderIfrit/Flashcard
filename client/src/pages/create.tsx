@@ -31,15 +31,20 @@ export default function Create() {
     try {
       setIsSubmitting(true);
       const response = await apiRequest<Deck>("POST", "/api/decks", data);
+      // Invalider le cache pour forcer le rechargement des decks
       await queryClient.invalidateQueries({ queryKey: ["/api/decks"] });
 
-      // Rediriger immédiatement vers la page d'édition pour ajouter des cartes
-      setLocation(`/edit/${response.id}`);
+      if (response && response.id) {
+        // Rediriger immédiatement vers la page d'édition pour ajouter des cartes
+        setLocation(`/edit/${response.id}`);
 
-      toast({
-        title: "Deck créé avec succès",
-        description: "Commencez à ajouter vos cartes maintenant !",
-      });
+        toast({
+          title: "Deck créé avec succès",
+          description: "Commencez à ajouter vos cartes maintenant !",
+        });
+      } else {
+        throw new Error("Réponse invalide du serveur");
+      }
     } catch (error) {
       console.error("Erreur lors de la création du deck:", error);
       toast({
