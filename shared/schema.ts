@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -14,6 +14,8 @@ export const cards = pgTable("cards", {
   deckId: integer("deck_id").notNull(),
   front: text("front").notNull(),
   back: text("back").notNull(),
+  frontImage: text("front_image"),
+  backImage: text("back_image"),
   notes: text("notes"),
   tags: text("tags").array(),
 });
@@ -28,6 +30,8 @@ export const insertCardSchema = createInsertSchema(cards).pick({
   deckId: true,
   front: true,
   back: true,
+  frontImage: true,
+  backImage: true,
   notes: true,
   tags: true,
 });

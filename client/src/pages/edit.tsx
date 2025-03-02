@@ -14,7 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Plus, Edit2, Trash2, Save, ArrowLeft } from "lucide-react";
+import { Image as ImageIcon, Plus, Edit2, Trash2, Save, ArrowLeft, Upload } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -37,12 +37,19 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 
+interface CardFormInputs extends InsertCard {
+  frontImage?: FileList;
+  backImage?: FileList;
+}
+
 export default function EditDeck() {
   const { id } = useParams();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [frontImagePreview, setFrontImagePreview] = useState<string | null>(null);
+  const [backImagePreview, setBackImagePreview] = useState<string | null>(null);
 
   const { data: deck, isLoading: isDeckLoading } = useQuery<Deck>({
     queryKey: [`/api/decks/${id}`],
@@ -52,7 +59,7 @@ export default function EditDeck() {
     queryKey: [`/api/decks/${id}/cards`],
   });
 
-  const cardForm = useForm<InsertCard>({
+  const cardForm = useForm<CardFormInputs>({
     resolver: zodResolver(insertCardSchema),
     defaultValues: {
       deckId: Number(id),
@@ -63,15 +70,56 @@ export default function EditDeck() {
     },
   });
 
-  const onSubmitCard = async (data: InsertCard) => {
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>, side: 'front' | 'back') => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (side === 'front') {
+          setFrontImagePreview(reader.result as string);
+        } else {
+          setBackImagePreview(reader.result as string);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const onSubmitCard = async (data: CardFormInputs) => {
     try {
-      const response = await apiRequest<Card>("POST", "/api/cards", data);
+      const formData = new FormData();
+      formData.append('deckId', String(data.deckId));
+      formData.append('front', data.front);
+      formData.append('back', data.back);
+      if (data.notes) formData.append('notes', data.notes);
+      if (data.tags?.length) formData.append('tags', JSON.stringify(data.tags));
+
+      if (data.frontImage?.[0]) {
+        formData.append('frontImage', data.frontImage[0]);
+      }
+      if (data.backImage?.[0]) {
+        formData.append('backImage', data.backImage[0]);
+      }
+
+      const response = await fetch('/api/cards', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('Erreur lors de la création de la carte');
+      }
+
       await queryClient.invalidateQueries({ queryKey: [`/api/decks/${id}/cards`] });
+
       toast({
         title: "Carte créée",
         description: "La carte a été ajoutée avec succès",
       });
+
       cardForm.reset();
+      setFrontImagePreview(null);
+      setBackImagePreview(null);
       setIsDialogOpen(false);
     } catch (error) {
       toast({
@@ -147,7 +195,7 @@ export default function EditDeck() {
                   Ajouter une carte
                 </Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="max-w-3xl">
                 <DialogHeader>
                   <DialogTitle>Nouvelle carte</DialogTitle>
                   <DialogDescription>
@@ -156,38 +204,110 @@ export default function EditDeck() {
                 </DialogHeader>
                 <Form {...cardForm}>
                   <form onSubmit={cardForm.handleSubmit(onSubmitCard)} className="space-y-4">
-                    <FormField
-                      control={cardForm.control}
-                      name="front"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Recto</FormLabel>
-                          <FormControl>
-                            <Textarea
-                              placeholder="Contenu du recto de la carte"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={cardForm.control}
-                      name="back"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Verso</FormLabel>
-                          <FormControl>
-                            <Textarea
-                              placeholder="Contenu du verso de la carte"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-4">
+                        <FormField
+                          control={cardForm.control}
+                          name="front"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Recto</FormLabel>
+                              <FormControl>
+                                <Textarea
+                                  placeholder="Contenu du recto de la carte"
+                                  {...field}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={cardForm.control}
+                          name="frontImage"
+                          render={({ field: { value, onChange, ...field } }) => (
+                            <FormItem>
+                              <FormLabel>Image Recto (optionnel)</FormLabel>
+                              <FormControl>
+                                <div className="space-y-2">
+                                  <Input
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={(e) => {
+                                      onChange(e.target.files);
+                                      handleImageChange(e, 'front');
+                                    }}
+                                    {...field}
+                                  />
+                                  {frontImagePreview && (
+                                    <div className="relative w-full h-40 bg-muted rounded-lg overflow-hidden">
+                                      <img
+                                        src={frontImagePreview}
+                                        alt="Aperçu recto"
+                                        className="w-full h-full object-contain"
+                                      />
+                                    </div>
+                                  )}
+                                </div>
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      <div className="space-y-4">
+                        <FormField
+                          control={cardForm.control}
+                          name="back"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Verso</FormLabel>
+                              <FormControl>
+                                <Textarea
+                                  placeholder="Contenu du verso de la carte"
+                                  {...field}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={cardForm.control}
+                          name="backImage"
+                          render={({ field: { value, onChange, ...field } }) => (
+                            <FormItem>
+                              <FormLabel>Image Verso (optionnel)</FormLabel>
+                              <FormControl>
+                                <div className="space-y-2">
+                                  <Input
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={(e) => {
+                                      onChange(e.target.files);
+                                      handleImageChange(e, 'back');
+                                    }}
+                                    {...field}
+                                  />
+                                  {backImagePreview && (
+                                    <div className="relative w-full h-40 bg-muted rounded-lg overflow-hidden">
+                                      <img
+                                        src={backImagePreview}
+                                        alt="Aperçu verso"
+                                        className="w-full h-full object-contain"
+                                      />
+                                    </div>
+                                  )}
+                                </div>
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </div>
+
                     <FormField
                       control={cardForm.control}
                       name="notes"
@@ -204,6 +324,7 @@ export default function EditDeck() {
                         </FormItem>
                       )}
                     />
+
                     <DialogFooter>
                       <Button type="submit">
                         <Save className="h-4 w-4 mr-2" />
@@ -263,13 +384,35 @@ export default function EditDeck() {
                         </div>
                         <div className="space-y-2">
                           <h3 className="font-semibold">Recto</h3>
-                          <p className="text-muted-foreground">{card.front}</p>
+                          <div className="space-y-2">
+                            <p className="text-muted-foreground">{card.front}</p>
+                            {card.frontImage && (
+                              <div className="relative w-full h-40 bg-muted rounded-lg overflow-hidden">
+                                <img
+                                  src={card.frontImage}
+                                  alt="Image recto"
+                                  className="w-full h-full object-contain"
+                                />
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </CardHeader>
                       <CardContent>
                         <div className="space-y-2">
                           <h3 className="font-semibold">Verso</h3>
-                          <p className="text-muted-foreground">{card.back}</p>
+                          <div className="space-y-2">
+                            <p className="text-muted-foreground">{card.back}</p>
+                            {card.backImage && (
+                              <div className="relative w-full h-40 bg-muted rounded-lg overflow-hidden">
+                                <img
+                                  src={card.backImage}
+                                  alt="Image verso"
+                                  className="w-full h-full object-contain"
+                                />
+                              </div>
+                            )}
+                          </div>
                         </div>
                         {card.notes && (
                           <div className="mt-4 space-y-2">
