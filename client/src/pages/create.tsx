@@ -30,21 +30,22 @@ export default function Create() {
   const onSubmit = async (data: InsertDeck) => {
     try {
       setIsSubmitting(true);
-      const response = await apiRequest<Deck>("POST", "/api/decks", data);
+      const deck = await apiRequest<Deck>("POST", "/api/decks", data);
+
+      if (!deck || !deck.id) {
+        throw new Error("Réponse invalide du serveur");
+      }
+
       // Invalider le cache pour forcer le rechargement des decks
       await queryClient.invalidateQueries({ queryKey: ["/api/decks"] });
 
-      if (response && response.id) {
-        // Rediriger immédiatement vers la page d'édition pour ajouter des cartes
-        setLocation(`/edit/${response.id}`);
+      // Rediriger vers la page d'édition
+      setLocation(`/edit/${deck.id}`);
 
-        toast({
-          title: "Deck créé avec succès",
-          description: "Commencez à ajouter vos cartes maintenant !",
-        });
-      } else {
-        throw new Error("Réponse invalide du serveur");
-      }
+      toast({
+        title: "Deck créé avec succès",
+        description: "Commencez à ajouter vos cartes maintenant !",
+      });
     } catch (error) {
       console.error("Erreur lors de la création du deck:", error);
       toast({
@@ -76,10 +77,7 @@ export default function Create() {
                   <FormItem>
                     <FormLabel>Nom du deck</FormLabel>
                     <FormControl>
-                      <Input 
-                        placeholder="Entrez le nom du deck" 
-                        {...field} 
-                      />
+                      <Input placeholder="Entrez le nom du deck" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -96,7 +94,8 @@ export default function Create() {
                       <Textarea
                         placeholder="Décrivez le contenu de votre deck"
                         className="min-h-[100px]"
-                        {...field}
+                        value={field.value ?? ""}
+                        onChange={(e) => field.onChange(e.target.value)}
                       />
                     </FormControl>
                     <FormMessage />
