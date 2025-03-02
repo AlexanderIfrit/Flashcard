@@ -6,6 +6,12 @@ import Home from "./pages/home";
 import Create from "./pages/create";
 import Study from "./pages/study";
 import Quiz from "./pages/quiz";
+import Edit from "./pages/edit";
+import Favorites from "./pages/favorites";
+import Tags from "./pages/tags";
+import Settings from "./pages/settings";
+import Library from "./pages/library";
+import StudyPlanner from "./pages/study-planner";
 
 function Router() {
   return (
@@ -17,6 +23,12 @@ function Router() {
           <Route path="/create" component={Create} />
           <Route path="/study/:id" component={Study} />
           <Route path="/quiz/:id" component={Quiz} />
+          <Route path="/edit/:id" component={Edit} />
+          <Route path="/favorites" component={Favorites} />
+          <Route path="/tags" component={Tags} />
+          <Route path="/settings" component={Settings} />
+          <Route path="/library" component={Library} />
+          <Route path="/study-planner" component={StudyPlanner} />
           <Route component={NotFound} />
         </Switch>
       </main>
