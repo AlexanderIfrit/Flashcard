@@ -6,7 +6,7 @@ export interface IStorage {
   getAllDecks(): Promise<Deck[]>;
   createDeck(deck: InsertDeck): Promise<Deck>;
   deleteDeck(id: number): Promise<void>;
-  
+
   // Card operations
   getCard(id: number): Promise<Card | undefined>;
   getCardsByDeck(deckId: number): Promise<Card[]>;
@@ -37,7 +37,12 @@ export class MemStorage implements IStorage {
 
   async createDeck(deck: InsertDeck): Promise<Deck> {
     const id = this.deckId++;
-    const newDeck: Deck = { ...deck, id };
+    const newDeck: Deck = {
+      id,
+      name: deck.name,
+      description: deck.description ?? null,
+      tags: deck.tags ?? null,
+    };
     this.decks.set(id, newDeck);
     return newDeck;
   }
@@ -63,7 +68,14 @@ export class MemStorage implements IStorage {
 
   async createCard(card: InsertCard): Promise<Card> {
     const id = this.cardId++;
-    const newCard: Card = { ...card, id };
+    const newCard: Card = {
+      id,
+      deckId: card.deckId,
+      front: card.front,
+      back: card.back,
+      notes: card.notes ?? null,
+      tags: card.tags ?? null,
+    };
     this.cards.set(id, newCard);
     return newCard;
   }

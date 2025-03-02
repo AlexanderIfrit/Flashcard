@@ -105,8 +105,9 @@ export default function Quiz() {
               Incorrect
             </Button>
             <Button
-              variant="success"
+              variant="default"
               size="lg"
+              className="bg-green-500 hover:bg-green-600"
               onClick={() => handleAnswer(true)}
             >
               <Check className="h-5 w-5 mr-2" />
